@@ -1,0 +1,7 @@
+---
+import { getNews, getGuides } from '../lib/content';
+const news = await getNews();
+const guides = await getGuides();
+---
+<html lang="ko"><head><meta charset="utf-8" /><title>AI 사용설명서</title></head>
+<body><p>뉴스 {news.length}건, 가이드 {guides.length}건</p></body></html>
