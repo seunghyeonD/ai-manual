@@ -1,0 +1,23 @@
+---
+import Base from '../../layouts/Base.astro';
+import GuideCard from '../../components/GuideCard.astro';
+import RoleFilter from '../../components/RoleFilter.astro';
+import { getGuides } from '../../lib/content';
+
+const guides = await getGuides();
+---
+<Base title="따라하기 가이드" description="직접 따라 해보고 확인한 AI 사용법만 싣습니다.">
+  <div class="wrap">
+    <header class="page-head">
+      <p class="eyebrow">Guides</p>
+      <h1>따라하기 가이드</h1>
+      <p>순서대로 따라 하면 되는 사용법입니다. 운영자가 직접 해보고 확인한 것만 올립니다.</p>
+    </header>
+    {guides.length === 0 ? <p class="none">첫 가이드를 직접 따라 해보며 준비하고 있습니다.</p> : (
+      <>
+        <RoleFilter difficulty />
+        <div class="grid">{guides.map((g) => <GuideCard entry={g} />)}</div>
+      </>
+    )}
+  </div>
+</Base>

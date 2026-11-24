@@ -1,0 +1,76 @@
+---
+import '../styles/global.css';
+import { SITE_NAME, SITE_TAGLINE, SHOW_DRAFTS, CF_ANALYTICS_TOKEN } from '../config/site';
+
+interface Props { title?: string; description?: string; }
+const { title, description = SITE_TAGLINE } = Astro.props;
+const fullTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME} — ${SITE_TAGLINE}`;
+const path = Astro.url.pathname;
+const nav = [
+  { href: '/news/', label: '뉴스' },
+  { href: '/guides/', label: '가이드' },
+  { href: '/about/', label: '소개' },
+];
+---
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    {SHOW_DRAFTS && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <a class="sr" href="#main">본문으로 건너뛰기</a>
+    {SHOW_DRAFTS && <div class="draft-bar" role="status">미리보기 화면입니다. 검증 전 초안이 섞여 있습니다.</div>}
+    <header class="top">
+      <div class="wrap top-in">
+        <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">AI</span>{SITE_NAME}</a>
+        <nav class="nav" aria-label="주 메뉴">
+          {nav.map((n) => <a href={n.href} aria-current={path.startsWith(n.href) ? 'page' : undefined}>{n.label}</a>)}
+        </nav>
+        <details class="search">
+          <summary>검색</summary>
+        </details>
+        <div class="search-box" id="search" hidden></div>
+      </div>
+    </header>
+    <main id="main"><slot /></main>
+    <footer class="foot">
+      <div class="wrap foot-in">
+        <span>뉴스 요약은 AI가 쓰고, 가이드는 사람이 직접 따라 해본 뒤 올립니다.</span>
+        <span>원문의 저작권은 각 출처에 있습니다. <a href="/about/">자세히</a></span>
+      </div>
+    </footer>
+    <script is:inline>
+      // 검색 도구는 "검색"을 처음 열 때만 불러온다.
+      (() => {
+        const details = document.querySelector('.search');
+        const box = document.getElementById('search');
+        let loaded = false;
+        details.addEventListener('toggle', () => {
+          box.hidden = !details.open;
+          if (!details.open || loaded) return;
+          loaded = true;
+          const css = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: '/pagefind/pagefind-ui.css' });
+          const js = Object.assign(document.createElement('script'), { src: '/pagefind/pagefind-ui.js' });
+          js.onload = () => {
+            new PagefindUI({ element: '#search', showImages: false, autofocus: true, translations: { placeholder: '궁금한 것을 입력하세요', zero_results: '"[SEARCH_TERM]"에 대한 글이 없습니다' } });
+          };
+          js.onerror = () => { box.textContent = '검색을 불러오지 못했습니다.'; };
+          document.head.append(css, js);
+        });
+      })();
+    </script>
+    {CF_ANALYTICS_TOKEN && (
+      <script is:inline defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={JSON.stringify({ token: CF_ANALYTICS_TOKEN })}></script>
+    )}
+  </body>
+</html>

@@ -1,7 +1,40 @@
 ---
+import Base from '../layouts/Base.astro';
+import NewsCard from '../components/NewsCard.astro';
+import GuideCard from '../components/GuideCard.astro';
 import { getNews, getGuides } from '../lib/content';
-const news = await getNews();
-const guides = await getGuides();
+import { ROLES, roleSlug } from '../config/roles';
+
+const news = (await getNews()).slice(0, 6);
+const guides = (await getGuides()).slice(0, 3);
 ---
-<html lang="ko"><head><meta charset="utf-8" /><title>AI 사용설명서</title></head>
-<body><p>뉴스 {news.length}건, 가이드 {guides.length}건</p></body></html>
+<Base>
+  <div class="wrap">
+    <section class="hero">
+      <p class="eyebrow">AI User Manual</p>
+      <h1>AI, <em>설명서대로</em><br />따라 하면 됩니다</h1>
+      <p>새 AI 소식을 매일 쉬운 말로 줄여 드리고, 직접 따라 해본 사용법만 골라 싣습니다. 회원가입은 없습니다.</p>
+    </section>
+
+    <section class="sec" aria-labelledby="h-role">
+      <div class="sec-head"><span class="sec-no">01</span><h2 id="h-role">내 일에 맞게 보기</h2></div>
+      <ul class="roles">
+        {ROLES.map((r) => <li><a href={`/role/${roleSlug(r)}/`}>{r}</a></li>)}
+      </ul>
+    </section>
+
+    <section class="sec" aria-labelledby="h-guide">
+      <div class="sec-head"><span class="sec-no">02</span><h2 id="h-guide">따라하기 가이드</h2><a class="more" href="/guides/">전체 보기 →</a></div>
+      {guides.length > 0
+        ? <div class="grid">{guides.map((g) => <GuideCard entry={g} />)}</div>
+        : <p class="none">첫 가이드를 직접 따라 해보며 준비하고 있습니다.</p>}
+    </section>
+
+    <section class="sec" aria-labelledby="h-news">
+      <div class="sec-head"><span class="sec-no">03</span><h2 id="h-news">오늘의 AI 소식</h2><a class="more" href="/news/">전체 보기 →</a></div>
+      {news.length > 0
+        ? <div class="grid">{news.map((n) => <NewsCard entry={n} showDate />)}</div>
+        : <p class="none">아직 올라온 소식이 없습니다.</p>}
+    </section>
+  </div>
+</Base>

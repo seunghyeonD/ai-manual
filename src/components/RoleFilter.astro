@@ -1,0 +1,42 @@
+---
+import { ROLES, roleSlug } from '../config/roles';
+
+interface Props { difficulty?: boolean; }
+const { difficulty = false } = Astro.props;
+---
+<div class="filters" data-filters>
+  <div class="filter" role="group" aria-label="직군으로 거르기">
+    <span class="filter-label">내 직군</span>
+    <button type="button" data-key="roles" data-value="" aria-pressed="true">전체</button>
+    {ROLES.map((r) => <button type="button" data-key="roles" data-value={roleSlug(r)} aria-pressed="false">{r}</button>)}
+  </div>
+  {difficulty && (
+    <div class="filter" role="group" aria-label="난이도로 거르기">
+      <span class="filter-label">난이도</span>
+      <button type="button" data-key="difficulty" data-value="" aria-pressed="true">전체</button>
+      {['쉬움', '보통', '어려움'].map((v) => <button type="button" data-key="difficulty" data-value={v} aria-pressed="false">{v}</button>)}
+    </div>
+  )}
+</div>
+<p class="none" data-none hidden>조건에 맞는 글이 아직 없습니다.</p>
+<script is:inline>
+  // 카드의 data-roles / data-difficulty로 거른다. 스크립트가 꺼져 있으면 전부 보인다.
+  (() => {
+    const root = document.querySelector('[data-filters]');
+    const none = document.querySelector('[data-none]');
+    const picked = { roles: '', difficulty: '' };
+    root.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-key]');
+      if (!btn) return;
+      picked[btn.dataset.key] = btn.dataset.value;
+      for (const b of root.querySelectorAll(`button[data-key="${btn.dataset.key}"]`)) b.setAttribute('aria-pressed', String(b === btn));
+      let shown = 0;
+      for (const card of document.querySelectorAll('.card[data-roles]')) {
+        const ok = (!picked.roles || card.dataset.roles.split(' ').includes(picked.roles)) && (!picked.difficulty || card.dataset.difficulty === picked.difficulty);
+        card.hidden = !ok;
+        if (ok) shown++;
+      }
+      none.hidden = shown > 0;
+    });
+  })();
+</script>

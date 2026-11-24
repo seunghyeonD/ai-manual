@@ -1,0 +1,41 @@
+---
+import Base from '../layouts/Base.astro';
+import { REPORT_FORM_URL, SITE_NAME } from '../config/site';
+---
+<Base title="소개" description={`${SITE_NAME}가 글을 모으고 확인하는 방식`}>
+  <article class="read">
+    <header class="page-head">
+      <p class="eyebrow">About</p>
+      <h1>이 사이트는 이렇게 만듭니다</h1>
+      <p>AI 소식은 쏟아지는데 찾아볼 시간은 없고, 찾아도 설명이 어렵습니다. 그래서 대신 찾아 쉬운 말로 옮깁니다.</p>
+    </header>
+    <div class="prose">
+      <h2>뉴스 요약</h2>
+      <ul>
+        <li>매일 아침 국내외 AI 관련 매체와 공식 블로그의 새 글을 모읍니다.</li>
+        <li>AI(인공지능)가 글을 읽고 세 줄에서 다섯 줄로 줄여 씁니다. 사람이 하나하나 확인하지는 않습니다.</li>
+        <li>요약이 틀릴 수 있습니다. 중요한 내용은 꼭 "원문 보기"로 확인해 주세요.</li>
+      </ul>
+      <h2>따라하기 가이드</h2>
+      <ul>
+        <li>운영자가 직접 처음부터 끝까지 따라 해보고, 되는 것을 확인한 글만 올립니다.</li>
+        <li>글마다 확인한 날짜를 적습니다. 서비스 화면은 자주 바뀌므로 날짜가 오래된 글은 실제 화면과 다를 수 있습니다.</li>
+      </ul>
+      <h2>저작권</h2>
+      <ul>
+        <li>기사 원문과 사진은 싣지 않습니다. 직접 쓴 짧은 요약과 원문으로 가는 링크만 둡니다.</li>
+        <li>원문의 저작권은 각 출처에 있습니다.</li>
+        <li>수집을 원하지 않는다고 밝힌 사이트의 글은 읽지 않습니다.</li>
+      </ul>
+      <h2>고쳐야 할 것이 있다면</h2>
+      <p>
+        요약이 틀렸거나, 글을 내려야 하거나, 가이드가 실제 화면과 다르면 알려 주세요.
+        {REPORT_FORM_URL
+          ? <a href={REPORT_FORM_URL} target="_blank" rel="noopener">제보하기 (새 창)</a>
+          : '제보 창구를 준비하고 있습니다.'}
+      </p>
+      <h2>비용과 광고</h2>
+      <p>회원가입도 광고도 없습니다. 개인이 운영하는 비영리 사이트입니다.</p>
+    </div>
+  </article>
+</Base>

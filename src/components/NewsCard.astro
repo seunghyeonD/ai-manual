@@ -1,0 +1,23 @@
+---
+import type { News } from '../lib/content';
+import { roleSlug } from '../config/roles';
+import { koDate } from '../lib/format';
+
+interface Props { entry: News; showDate?: boolean; }
+const { entry, showDate = false } = Astro.props;
+const d = entry.data;
+---
+<article class="card" id={`n-${entry.id}`} data-roles={d.roles.map(roleSlug).join(' ')}>
+  <p class="card-meta">
+    {showDate && <span>{koDate(d.date)}</span>}
+    <span>{d.sourceName}</span>
+    {d.lang === 'en' && <span class="hot">영어 원문</span>}
+  </p>
+  <h3>{d.title}</h3>
+  <ul class="sum">{d.summary.map((line) => <li>{line}</li>)}</ul>
+  <p class="why"><b>그래서 뭐가 달라지나요</b>{d.whyItMatters}</p>
+  <div class="card-foot">
+    <ul class="tags" aria-label="관련 직군">{d.roles.map((r) => <li>{r}</li>)}</ul>
+    <a class="src" href={d.sourceUrl} target="_blank" rel="noopener nofollow">원문 보기<span class="sr"> (새 창, {d.sourceName})</span> ↗</a>
+  </div>
+</article>

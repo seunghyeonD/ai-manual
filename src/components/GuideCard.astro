@@ -1,0 +1,20 @@
+---
+import type { Guide } from '../lib/content';
+import { roleSlug } from '../config/roles';
+
+interface Props { entry: Guide; }
+const { entry } = Astro.props;
+const d = entry.data;
+---
+<a class="card guide-card" href={`/guides/${entry.id}/`} data-roles={d.roles.map(roleSlug).join(' ')} data-difficulty={d.difficulty}>
+  <p class="card-meta">
+    <span>난이도 {d.difficulty}</span>
+    <span>약 {d.minutes}분</span>
+    {!d.verifiedAt && <span class="hot">미검증 초안</span>}
+  </p>
+  <h3>{d.title}</h3>
+  <div class="card-foot">
+    <ul class="tags" aria-label="관련 직군">{d.roles.map((r) => <li>{r}</li>)}</ul>
+    <span class="src" aria-hidden="true">따라 하기 →</span>
+  </div>
+</a>

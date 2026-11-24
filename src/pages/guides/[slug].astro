@@ -1,0 +1,41 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { getGuides, type Guide } from '../../lib/content';
+import { reportUrl } from '../../config/site';
+import { koDate } from '../../lib/format';
+
+export async function getStaticPaths() {
+  return (await getGuides()).map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+interface Props { entry: Guide; }
+const { entry } = Astro.props;
+const d = entry.data;
+const { Content } = await render(entry);
+const report = reportUrl(d.title);
+---
+<Base title={d.title} description={`${d.difficulty} · 약 ${d.minutes}분 · ${d.roles.join(', ')}`}>
+  <article class="read" data-pagefind-body>
+    <a class="back" href="/guides/" data-pagefind-ignore>← 가이드 전체</a>
+    {!d.verifiedAt && <p class="draft-bar" role="status" data-pagefind-ignore>미검증 초안 — 아직 직접 따라 해보지 않은 글입니다</p>}
+    <header class="page-head">
+      <p class="eyebrow">Guide</p>
+      <h1>{d.title}</h1>
+      <dl class="spec">
+        <div><dt>난이도</dt><dd>{d.difficulty}</dd></div>
+        <div><dt>걸리는 시간</dt><dd>약 {d.minutes}분</dd></div>
+        <div><dt>이런 분께</dt><dd>{d.roles.join(', ')}</dd></div>
+        {d.tools.length > 0 && <div><dt>필요한 것</dt><dd>{d.tools.join(', ')}</dd></div>}
+      </dl>
+      {d.verifiedAt && (
+        <p class="verified"><b>{d.verifiedAt.slice(0, 4)}년 {koDate(d.verifiedAt)}</b>에 직접 따라 해보고 확인했습니다. 그 뒤로 화면이 바뀌었을 수 있습니다.</p>
+      )}
+    </header>
+    <div class="prose"><Content /></div>
+    <aside class="help" data-pagefind-ignore>
+      <strong>설명과 화면이 다른가요?</strong>
+      <p>서비스 화면은 자주 바뀝니다. 어느 단계에서 막혔는지 알려주시면 고치겠습니다.</p>
+      {report && <a class="btn" href={report} target="_blank" rel="noopener">여기서 막혔어요<span class="sr"> (새 창)</span></a>}
+    </aside>
+  </article>
+</Base>

@@ -1,0 +1,30 @@
+---
+import Base from '../layouts/Base.astro';
+import NewsCard from '../components/NewsCard.astro';
+import RoleFilter from '../components/RoleFilter.astro';
+import { getNews } from '../lib/content';
+import { koDate } from '../lib/format';
+
+const news = await getNews();
+const days = [...new Set(news.map((n) => n.data.date))];
+---
+<Base title="AI 소식" description="국내외 AI 소식을 매일 쉬운 말로 줄여 드립니다.">
+  <div class="wrap" data-pagefind-body>
+    <header class="page-head">
+      <p class="eyebrow">News</p>
+      <h1>AI 소식</h1>
+      <p>매일 아침 국내외 AI 소식을 모아 세 줄에서 다섯 줄로 줄입니다. 자세한 내용은 "원문 보기"에서 확인하세요.</p>
+    </header>
+    {news.length === 0 ? <p class="none">아직 올라온 소식이 없습니다.</p> : (
+      <>
+        <RoleFilter />
+        {days.map((day) => (
+          <section class="day">
+            <h2>{koDate(day)}</h2>
+            <div class="grid">{news.filter((n) => n.data.date === day).map((n) => <NewsCard entry={n} />)}</div>
+          </section>
+        ))}
+      </>
+    )}
+  </div>
+</Base>

@@ -1,0 +1,36 @@
+---
+import Base from '../../layouts/Base.astro';
+import NewsCard from '../../components/NewsCard.astro';
+import GuideCard from '../../components/GuideCard.astro';
+import { getNews, getGuides } from '../../lib/content';
+import { ROLES, roleSlug, type Role } from '../../config/roles';
+
+export function getStaticPaths() {
+  return ROLES.map((role) => ({ params: { role: roleSlug(role) }, props: { role } }));
+}
+interface Props { role: Role; }
+const { role } = Astro.props;
+const guides = (await getGuides()).filter((g) => g.data.roles.includes(role));
+const news = (await getNews()).filter((n) => n.data.roles.includes(role)).slice(0, 30);
+---
+<Base title={`${role}를 위한 AI`} description={`${role}에게 쓸모 있는 AI 가이드와 소식`}>
+  <div class="wrap">
+    <header class="page-head">
+      <p class="eyebrow">For you</p>
+      <h1>{role}를 위한 AI</h1>
+      <p>{role} 업무에 쓸모 있는 가이드와 소식만 모았습니다.</p>
+    </header>
+    <section class="sec" aria-labelledby="h-guide">
+      <div class="sec-head"><span class="sec-no">01</span><h2 id="h-guide">따라하기 가이드</h2></div>
+      {guides.length > 0
+        ? <div class="grid">{guides.map((g) => <GuideCard entry={g} />)}</div>
+        : <p class="none">이 직군의 가이드는 준비하고 있습니다.</p>}
+    </section>
+    <section class="sec" aria-labelledby="h-news">
+      <div class="sec-head"><span class="sec-no">02</span><h2 id="h-news">관련 소식</h2></div>
+      {news.length > 0
+        ? <div class="grid">{news.map((n) => <NewsCard entry={n} showDate />)}</div>
+        : <p class="none">아직 올라온 소식이 없습니다.</p>}
+    </section>
+  </div>
+</Base>
