@@ -54,7 +54,7 @@ OPENROUTER_API_KEY=... npm run collect -- --dry-run   # 저장 없이 요약만 
 ## 운영
 
 - **출처 추가**: `sources.json`에 한 줄 추가합니다. 피드 주소가 실제로 열리는지 먼저 확인하세요.
-- **잘못된 요약 내리기**: `src/content/news`에서 해당 파일을 지우고 커밋합니다.
+- **잘못된 요약 내리기**: `src/content/news`에서 해당 파일을 지우고, 그 글의 원문 주소를 `blocked-urls.txt`에 한 줄 추가해 커밋합니다. 주소를 적지 않으면 다음 날 다시 수집될 수 있습니다.
 - **가이드 올리기**: `docs/guide-prompt.md`를 따릅니다. `verifiedAt`이 없는 가이드는 사이트에 나오지 않습니다.
 - **AI 제공자 바꾸기**: `scripts/lib/llm.ts`의 `makeAsk`만 다시 쓰면 됩니다.
 

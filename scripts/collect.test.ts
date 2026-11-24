@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readdir, readFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runCollect, seoulDate } from './collect.ts';
@@ -76,4 +76,31 @@ test('dry-run은 파일을 만들지 않는다', async () => {
 test('날짜는 한국 시간 기준이다', () => {
   assert.equal(seoulDate(new Date('2026-11-23T15:00:00Z')), '2026-11-24');
   assert.equal(seoulDate(new Date('2026-11-23T14:59:59Z')), '2026-11-23');
+});
+
+// --- 최종 검토에서 나온 경우들 ---
+
+test('내린 글은 다시 올라오지 않는다', async () => {
+  const dir = await tmp();
+  const blockedFile = join(dir, 'blocked-urls.txt');
+  await writeFile(blockedFile, 'https://site.example/a1\n');
+  const { written } = await runCollect({ sources, newsDir: join(dir, 'news'), blockedFile, today, now, ask: ask(), fetchFn: site([1, 2]) });
+  assert.equal(written.length, 1);
+  assert.ok((await readFile(join(dir, 'news', written[0]), 'utf8')).includes('https://site.example/a2'));
+});
+
+test('여러 건을 골랐는데 하나도 못 실으면 오류를 낸다', async () => {
+  const failing: Ask = async (_s, _u, schema) => {
+    if ('picks' in (schema as { properties: object }).properties) return { picks: [0, 1, 2] };
+    throw new Error('HTTP 429');
+  };
+  await assert.rejects(runCollect({ sources, newsDir: await tmp(), today, now, ask: failing, fetchFn: site([1, 2, 3]) }), /하나도/);
+});
+
+test('저장 단계의 실패도 그 글만 건너뛴다', async () => {
+  const dir = await tmp();
+  const newsDir = join(dir, 'news');
+  await writeFile(newsDir, '폴더 자리에 파일이 있음');
+  const { written } = await runCollect({ sources, newsDir, today, now, ask: ask(), fetchFn: site([1]) });
+  assert.deepEqual(written, []);
 });

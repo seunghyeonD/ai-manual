@@ -6,7 +6,7 @@
   --ink-soft: #5d584e;
   --rule: #1b1a17;
   --hair: #d9d2c2;
-  --accent: #d9480f;
+  --accent: #c2410c;
   --accent-ink: #ffffff;
   --mark: #ffe8b8;
   --font: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
@@ -51,6 +51,7 @@ a:hover { color: var(--accent); }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
 [hidden] { display: none !important; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+a.sr:focus { position: fixed; top: 0.5rem; left: 0.5rem; z-index: 20; width: auto; height: auto; clip-path: none; padding: 0.6rem 1rem; background: var(--ink); color: var(--paper); border-radius: 3px; }
 
 .wrap { width: min(100% - 2rem, var(--wide)); margin-inline: auto; }
 .read { width: min(100% - 2rem, var(--read)); margin-inline: auto; }

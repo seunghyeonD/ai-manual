@@ -18,7 +18,7 @@ const { difficulty = false } = Astro.props;
     </div>
   )}
 </div>
-<p class="none" data-none hidden>조건에 맞는 글이 아직 없습니다.</p>
+<p class="none" data-none hidden aria-live="polite">조건에 맞는 글이 아직 없습니다.</p>
 <script is:inline>
   // 카드의 data-roles / data-difficulty로 거른다. 스크립트가 꺼져 있으면 전부 보인다.
   (() => {

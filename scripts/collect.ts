@@ -1,11 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { fetchFeeds, type Source } from './lib/rss.ts';
 import { fetchArticleText } from './lib/article.ts';
 import { filterNew } from './lib/dedupe.ts';
 import { makeAsk, selectCandidates, summarize, type Ask } from './lib/llm.ts';
-import { newsFileName, readExistingUrls, toMarkdown } from './lib/newsFile.ts';
+import { newsFileName, readBlockedUrls, readExistingUrls, toMarkdown } from './lib/newsFile.ts';
 
 /** 한국 시간 기준 YYYY-MM-DD. */
 export const seoulDate = (d: Date): string =>
@@ -14,6 +14,8 @@ export const seoulDate = (d: Date): string =>
 type Deps = {
   sources: Source[];
   newsDir: string;
+  /** 내린 글 주소 목록 파일. readBlockedUrls 참고 */
+  blockedFile?: string;
   /** YYYY-MM-DD, 게시 날짜 */
   today: string;
   ask: Ask;
@@ -24,9 +26,10 @@ type Deps = {
 
 /** 수집 → 중복 제거 → 선별 → 본문 받기 → 요약 → 저장. 한 글의 실패는 그 글만 건너뛴다. */
 export async function runCollect(deps: Deps): Promise<{ written: string[] }> {
-  const { sources, newsDir, today, ask, fetchFn, now, dryRun = false } = deps;
+  const { sources, newsDir, blockedFile, today, ask, fetchFn, now, dryRun = false } = deps;
   const candidates = await fetchFeeds(sources, { now, fetchFn });
-  const fresh = filterNew(candidates, await readExistingUrls(newsDir));
+  const known = new Set([...(await readExistingUrls(newsDir)), ...(blockedFile ? await readBlockedUrls(blockedFile) : [])]);
+  const fresh = filterNew(candidates, known);
   const picked = await selectCandidates(fresh, ask);
   console.log(`[collect] 후보 ${candidates.length}건, 새 글 ${fresh.length}건, 선별 ${picked.length}건`);
 
@@ -52,6 +55,10 @@ export async function runCollect(deps: Deps): Promise<{ written: string[] }> {
     }
   }
   console.log(`[collect] ${dryRun ? '시험 실행' : '저장'} ${written.length}건`);
+  // 한두 건이 걸러지는 것은 정상이지만, 여러 건을 골라 놓고 전부 실패하면 모델이나 키가 고장 난 것이다.
+  if (picked.length >= 3 && written.length === 0) {
+    throw new Error(`${picked.length}건을 골랐지만 하나도 싣지 못했습니다`);
+  }
   return { written };
 }
 
@@ -64,7 +71,8 @@ async function main() {
   const root = new URL('..', import.meta.url);
   await runCollect({
     sources: JSON.parse(await readFile(new URL('sources.json', root), 'utf8')),
-    newsDir: new URL('src/content/news', root).pathname,
+    newsDir: fileURLToPath(new URL('src/content/news', root)),
+    blockedFile: fileURLToPath(new URL('blocked-urls.txt', root)),
     today: seoulDate(new Date()),
     ask: makeAsk({ apiKey, model: process.env.LLM_MODEL || 'openrouter/free' }),
     dryRun: process.argv.includes('--dry-run'),

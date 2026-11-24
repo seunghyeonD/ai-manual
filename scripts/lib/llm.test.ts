@@ -30,9 +30,23 @@ test('범위 밖·중복 번호는 무시한다', async () => {
   assert.deepEqual(out.map((x) => x.url), ['https://ex.com/0', 'https://ex.com/2']);
 });
 
-test('선별 호출이 실패하면 아무것도 게시하지 않는다', async () => {
-  assert.deepEqual(await selectCandidates(cands(3), async () => { throw new Error('x'); }), []);
-  assert.deepEqual(await selectCandidates(cands(3), answer('oops')), []);
+test('선별 호출이 실패하면 조용히 넘어가지 않고 오류를 낸다', async () => {
+  await assert.rejects(selectCandidates(cands(3), async () => { throw new Error('HTTP 401'); }), /401/);
+  await assert.rejects(selectCandidates(cands(3), answer('oops')), /형식/);
+});
+
+test('고를 글이 없다는 답은 오류가 아니다', async () => {
+  assert.deepEqual(await selectCandidates(cands(3), answer({ picks: [] })), []);
+});
+
+test('두 번 지워야 빈 줄이 되는 요약도 건너뛴다', async () => {
+  const nested = { ...ok, summary: ['[[](x)](y)', '둘째 줄입니다.', '셋째 줄입니다.'] };
+  assert.equal(await summarize(c, longBody, answer(nested), today), null);
+});
+
+test('makeAsk는 JSON이 아닌 답에서 예외를 던진다', async () => {
+  const fetchFn = (async () => Response.json({ choices: [{ message: { content: '죄송하지만 할 수 없습니다' } }] })) as unknown as typeof fetch;
+  await assert.rejects(makeAsk({ apiKey: 'k', model: 'm', fetchFn })('s', 'u', {}));
 });
 
 test('후보가 없으면 모델을 부르지 않는다', async () => {

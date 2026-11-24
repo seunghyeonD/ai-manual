@@ -39,4 +39,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/content/news
           git commit -m "chore(news): $(TZ=Asia/Seoul date +%F)"
+          git pull --rebase
           git push

@@ -18,7 +18,7 @@ export function makeAsk(opts: { apiKey: string; model: string; fetchFn?: typeof 
     const res = await fetchFn(ENDPOINT, {
       method: 'POST',
       headers: { authorization: `Bearer ${opts.apiKey}`, 'content-type': 'application/json' },
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(60_000),
       body: JSON.stringify({
         model: opts.model,
         messages: [
@@ -53,21 +53,19 @@ const SELECT_SCHEMA = {
   additionalProperties: false,
 };
 
-/** 같은 사건은 하나로 묶고 쓸모 있는 순으로 최대 max건. 실패하면 아무것도 고르지 않는다. */
+/**
+ * 같은 사건은 하나로 묶고 쓸모 있는 순으로 최대 max건.
+ * 호출 실패나 형식이 틀린 답은 오류로 올린다 — 키 만료 같은 고장이 "새 글 없음"으로 묻히면 안 된다.
+ */
 export async function selectCandidates(cands: Candidate[], ask: Ask, max = 10): Promise<Candidate[]> {
   if (cands.length === 0) return [];
   const list = cands
     .map((c, i) => `[${i}] ${c.official ? '공식 · ' : ''}${c.lang === 'ko' ? '한국어' : '영어'} · ${c.sourceName}\n제목: ${c.title}\n발췌: ${c.excerpt.slice(0, 200)}`)
     .join('\n\n');
-  try {
-    const out = (await ask(SELECT_SYSTEM, `최대 ${max}개를 고르세요.\n\n<candidates>\n${list}\n</candidates>`, SELECT_SCHEMA)) as { picks?: unknown };
-    if (!Array.isArray(out?.picks)) return [];
-    const picks = [...new Set(out.picks)].filter((n): n is number => Number.isInteger(n) && n >= 0 && n < cands.length);
-    return picks.slice(0, max).map((n) => cands[n]);
-  } catch (e) {
-    console.warn(`[llm] 선별 실패: ${e instanceof Error ? e.message : e}`);
-    return [];
-  }
+  const out = (await ask(SELECT_SYSTEM, `최대 ${max}개를 고르세요.\n\n<candidates>\n${list}\n</candidates>`, SELECT_SCHEMA)) as { picks?: unknown };
+  if (!Array.isArray(out?.picks)) throw new Error('선별 응답의 형식이 틀렸습니다');
+  const picks = [...new Set(out.picks)].filter((n): n is number => Number.isInteger(n) && n >= 0 && n < cands.length);
+  return picks.slice(0, max).map((n) => cands[n]);
 }
 
 const SUMMARIZE_SYSTEM = `당신은 AI를 잘 모르는 한국 직장인에게 AI 소식을 쉽게 풀어 주는 편집자입니다.

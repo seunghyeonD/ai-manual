@@ -88,3 +88,32 @@ test('본문은 20,000자까지만 쓴다', async () => {
 test('스크립트와 메뉴는 본문에서 빠진다', () => {
   assert.equal(htmlToText('<nav>메뉴</nav><script>x()</script><p>본문 &amp; 내용</p>'), '본문 & 내용');
 });
+
+// --- 최종 검토에서 나온 경우들 ---
+
+test('주소가 이상한 글 하나가 섞여도 같은 출처의 다른 글은 수집된다', async () => {
+  const fetchFn = fake({
+    'https://ok.example/rss': rssXml([
+      { title: '자바스크립트 링크', link: 'javascript:alert(1)//', date: hoursAgo(1) },
+      { title: '데이터 링크', link: 'data:text/html,x', date: hoursAgo(1) },
+      { title: '상대 주소', link: '/posts/1', date: hoursAgo(1) },
+      { title: '정상', link: 'https://ok.example/2', date: hoursAgo(1) },
+    ]),
+  });
+  const out = await fetchFeeds([src('ok')], { now, fetchFn });
+  assert.deepEqual(out.map((c) => c.url), ['https://ok.example/posts/1', 'https://ok.example/2']);
+});
+
+test('범위를 벗어난 문자 참조가 있어도 출처 전체를 버리지 않는다', async () => {
+  assert.equal(htmlToText('&#99999999999; 글 &#x41;'), '글 A');
+  const fetchFn = fake({
+    'https://ok.example/rss': rssXml([{ title: '깨진 &amp;#99999999999; 제목', link: 'https://ok.example/1', date: hoursAgo(1) }]),
+  });
+  assert.equal((await fetchFeeds([src('ok')], { now, fetchFn })).length, 1);
+});
+
+test('모든 출처가 실패하면 조용히 넘어가지 않고 오류를 낸다', async () => {
+  const fetchFn = fake({ 'https://a.example/rss': 500, 'https://b.example/rss': '<<<' });
+  await assert.rejects(fetchFeeds([src('a'), src('b')], { now, fetchFn }), /모든 출처/);
+  assert.deepEqual(await fetchFeeds([], { now, fetchFn }), []);
+});

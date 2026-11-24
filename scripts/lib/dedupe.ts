@@ -5,7 +5,12 @@ import { normalizeUrl } from './url.ts';
 export function filterNew(cands: Candidate[], existingUrls: Set<string>): Candidate[] {
   const seen = new Set(existingUrls);
   return cands.filter((c) => {
-    const key = normalizeUrl(c.url);
+    let key: string;
+    try {
+      key = normalizeUrl(c.url);
+    } catch {
+      return false; // 주소가 깨진 글은 싣지 않는다
+    }
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

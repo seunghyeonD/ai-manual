@@ -16,7 +16,8 @@ const news = defineCollection({
     title: z.string().min(1),
     date: ymd,
     sourceName: z.string().min(1),
-    sourceUrl: z.url(),
+    // 이 값이 그대로 링크가 되므로 http(s)만 받는다.
+    sourceUrl: z.url({ protocol: /^https?$/ }),
     lang: z.enum(['ko', 'en']),
     roles,
     summary: z.array(z.string().min(1)).min(3).max(5),

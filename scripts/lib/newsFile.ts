@@ -5,13 +5,20 @@ import { normalizeUrl, urlHash } from './url.ts';
 
 /** 모델이 쓴 글에서 태그·링크·주소를 지운다. 게시물의 링크는 sourceUrl 하나뿐이어야 한다. */
 export function sanitize(text: string): string {
-  return text
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  // 한 번 지운 결과가 다시 태그·링크 모양이 될 수 있어서([[](x)](y) 등) 더 바뀌지 않을 때까지 반복한다.
+  let out = text;
+  for (let i = 0; i < 10; i++) {
+    const next = out
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\b(?:https?:\/\/|www\.)\S+/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (next === out) return out;
+    out = next;
+  }
+  return ''; // 열 번을 돌려도 안정되지 않는 글은 싣지 않는다
 }
 
 /** JSON 문자열은 유효한 YAML 스칼라라서 따옴표·콜론·이모지가 있어도 안전하다. */
@@ -46,6 +53,24 @@ export async function readExistingUrls(dir: string): Promise<Set<string>> {
       urls.add(normalizeUrl(m[1].startsWith('"') ? JSON.parse(m[1]) : m[1].trim()));
     } catch {
       // 주소가 깨진 파일은 중복 판정에서 빼고 넘어간다. 빌드의 스키마 검사가 따로 잡는다.
+    }
+  }
+  return urls;
+}
+
+/**
+ * 내린 글 목록(한 줄에 주소 하나, #은 주석). 파일을 지우기만 하면 48시간 안에 다시 수집될 수 있어서,
+ * 내린 글의 주소를 여기에 적어 둔다. 파일이 없으면 빈 집합.
+ */
+export async function readBlockedUrls(file: string): Promise<Set<string>> {
+  const text = await readFile(file, 'utf8').catch(() => '');
+  const urls = new Set<string>();
+  for (const line of text.split('\n').map((l) => l.trim())) {
+    if (!line || line.startsWith('#')) continue;
+    try {
+      urls.add(normalizeUrl(line));
+    } catch {
+      // 주소가 아닌 줄은 무시한다.
     }
   }
   return urls;

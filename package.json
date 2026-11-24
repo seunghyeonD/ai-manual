@@ -8,11 +8,10 @@
     "test": "tsx --test \"scripts/**/*.test.ts\" \"src/**/*.test.ts\"",
     "dev": "astro dev",
     "build": "astro build && pagefind --site dist",
-    "collect": "tsx scripts/collect.ts",
-    "draft-guide": "tsx scripts/draft-guide.ts"
+    "collect": "tsx scripts/collect.ts"
   },
   "type": "module",
-  "private": "true",
+  "private": true,
   "engines": {
     "node": ">=22.23.4"
   },

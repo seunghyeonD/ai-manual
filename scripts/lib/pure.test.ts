@@ -8,7 +8,7 @@ import type { Candidate, NewsItem } from './types.ts';
 import { normalizeUrl } from './url.ts';
 import { filterNew } from './dedupe.ts';
 import { hasLongOverlap } from './overlap.ts';
-import { sanitize, toMarkdown, newsFileName, readExistingUrls } from './newsFile.ts';
+import { sanitize, toMarkdown, newsFileName, readExistingUrls, readBlockedUrls } from './newsFile.ts';
 
 const base: Candidate = {
   title: '제목', url: 'https://ex.com/x', excerpt: '발췌', sourceName: '출처',
@@ -83,4 +83,26 @@ test('저장된 글의 주소를 다시 읽어 온다', async () => {
   await writeFile(join(dir, newsFileName(item)), toMarkdown({ ...item, sourceUrl: 'https://ex.com/a/?utm_source=x' }));
   assert.deepEqual(await readExistingUrls(dir), new Set([normalizeUrl('https://ex.com/a')]));
   assert.deepEqual(await readExistingUrls(join(dir, 'missing')), new Set());
+});
+
+// --- 최종 검토에서 나온 경우들 ---
+
+test('주소가 깨진 후보는 예외 없이 빠진다', () => {
+  const out = filterNew([{ ...base, url: 'not a url' }, { ...base, url: 'https://ex.com/ok' }], new Set());
+  assert.deepEqual(out.map((x) => x.url), ['https://ex.com/ok']);
+});
+
+test('sanitize는 한 번 더 돌려도 결과가 같다', () => {
+  for (const s of ['[[](x)](y)', '[a [b](c)](d)', '<<b>script>x</<b>script>', '![[그림](a)](b) 끝', '안녕 [여기](https://e.example) 끝']) {
+    assert.equal(sanitize(sanitize(s)), sanitize(s), s);
+  }
+  assert.equal(sanitize('[[](x)](y)'), '');
+});
+
+test('내린 글 목록의 주소는 이미 실린 것으로 본다', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'blocked-'));
+  const file = join(dir, 'blocked-urls.txt');
+  await writeFile(file, '# 내린 글\n\nhttps://ex.com/down/?utm_source=x\nnot a url\n');
+  assert.deepEqual(await readBlockedUrls(file), new Set([normalizeUrl('https://ex.com/down')]));
+  assert.deepEqual(await readBlockedUrls(join(dir, 'none.txt')), new Set());
 });
