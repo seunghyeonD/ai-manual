@@ -1,0 +1,42 @@
+name: daily-news
+
+on:
+  schedule:
+    - cron: '0 22 * * *' # 매일 07:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: daily-news
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: 수집·요약
+        run: npm run collect
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+      # 형식이 깨진 글이 main에 들어가 사이트 빌드를 막는 일이 없게 먼저 빌드해 본다.
+      - run: npm run build
+      - name: 새 글 커밋
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if [ -z "$(git status --porcelain src/content/news)" ]; then
+            echo "새 글 없음"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/content/news
+          git commit -m "chore(news): $(TZ=Asia/Seoul date +%F)"
+          git push
