@@ -142,3 +142,28 @@ test('원문 제목을 그대로 쓴 것은 베낌으로 보지 않는다', asyn
   const item = await summarize(c, `${headline} ${longBody}`, answer({ ...ok, title: headline }), today);
   assert.equal(item?.title, headline);
 });
+
+test('저장하는 원문 주소에서 추적 꼬리표를 뗀다', async () => {
+  const tracked = { ...c, url: 'https://ex.com/a/?utm_source=geeknews&id=3#top' };
+  const item = await summarize(tracked, longBody, answer(ok), today);
+  assert.equal(item?.sourceUrl, 'https://ex.com/a/?id=3#top');
+});
+
+test('다른 나라 글자가 섞인 요약은 건너뛴다', async () => {
+  for (const bad of ['300단어 이상 người 쓴 글입니다.', '새로운 模型을 공개했습니다.', 'Новая 모델을 공개했습니다.']) {
+    assert.equal(await summarize(c, longBody, answer({ ...ok, summary: [bad, ...ok.summary.slice(1)] }), today), null, bad);
+  }
+  assert.equal(await summarize(c, longBody, answer({ ...ok, whyItMatters: '업무가 更 편해집니다.' }), today), null);
+});
+
+test('"~습니다"체가 아닌 요약은 건너뛴다', async () => {
+  const plain = { ...ok, summary: ['회사가 새 서비스를 공개했다.', ...ok.summary.slice(1)] };
+  assert.equal(await summarize(c, longBody, answer(plain), today), null);
+});
+
+test('요약 지시문은 말투와 숫자 규칙을 담는다', async () => {
+  let system = '';
+  await summarize(c, longBody, async (s) => { system = s; return ok; }, today);
+  assert.match(system, /습니다/);
+  assert.match(system, /숫자/);
+});
