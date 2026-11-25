@@ -65,8 +65,18 @@ export async function selectCandidates(cands: Candidate[], ask: Ask, max = 10): 
   const list = cands
     .map((c, i) => `[${i}] ${c.official ? '공식 · ' : ''}${c.lang === 'ko' ? '한국어' : '영어'} · ${c.sourceName}\n제목: ${c.title}\n발췌: ${c.excerpt.slice(0, 200)}`)
     .join('\n\n');
-  const out = (await ask(SELECT_SYSTEM, `최대 ${max}개를 고르세요.\n\n<candidates>\n${list}\n</candidates>`, SELECT_SCHEMA)) as { picks?: unknown };
-  if (!Array.isArray(out?.picks)) throw new Error('선별 응답의 형식이 틀렸습니다');
+  // 선별이 실패하면 그날 수집 전체가 멈추므로 세 번까지 시도한다(무료 모델은 자주 늦거나 빈 답을 준다).
+  let out: { picks?: unknown } | undefined;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      out = (await ask(SELECT_SYSTEM, `최대 ${max}개를 고르세요.\n\n<candidates>\n${list}\n</candidates>`, SELECT_SCHEMA)) as { picks?: unknown };
+      if (!Array.isArray(out?.picks)) throw new Error('선별 응답의 형식이 틀렸습니다');
+      break;
+    } catch (e) {
+      if (attempt === 3) throw e;
+      console.warn(`[llm] 선별 ${attempt}번째 실패, 다시 시도: ${e instanceof Error ? e.message : e}`);
+    }
+  }
   const picks = [...new Set(out.picks)].filter((n): n is number => Number.isInteger(n) && n >= 0 && n < cands.length);
   return picks.slice(0, max).map((n) => cands[n]);
 }

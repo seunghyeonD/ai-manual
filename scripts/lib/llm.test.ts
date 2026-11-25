@@ -167,3 +167,14 @@ test('요약 지시문은 말투와 숫자 규칙을 담는다', async () => {
   assert.match(system, /습니다/);
   assert.match(system, /숫자/);
 });
+
+test('선별은 실패하면 두 번까지 다시 시도한다', async () => {
+  let calls = 0;
+  const flaky: Ask = async () => { if (++calls < 3) throw new Error('timeout'); return { picks: [1] }; };
+  assert.deepEqual(await selectCandidates(cands(3), flaky), [cands(3)[1]]);
+  assert.equal(calls, 3);
+
+  calls = 0;
+  await assert.rejects(selectCandidates(cands(3), async () => { calls++; throw new Error('HTTP 401'); }), /401/);
+  assert.equal(calls, 3);
+});
