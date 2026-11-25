@@ -31,8 +31,8 @@ test('범위 밖·중복 번호는 무시한다', async () => {
 });
 
 test('선별 호출이 실패하면 조용히 넘어가지 않고 오류를 낸다', async () => {
-  await assert.rejects(selectCandidates(cands(3), async () => { throw new Error('HTTP 401'); }), /401/);
-  await assert.rejects(selectCandidates(cands(3), answer('oops')), /형식/);
+  await assert.rejects(selectCandidates(cands(3), async () => { throw new Error("HTTP 401"); }, 10, 0), /401/);
+  await assert.rejects(selectCandidates(cands(3), answer("oops"), 10, 0), /형식/);
 });
 
 test('고를 글이 없다는 답은 오류가 아니다', async () => {
@@ -171,10 +171,24 @@ test('요약 지시문은 말투와 숫자 규칙을 담는다', async () => {
 test('선별은 실패하면 두 번까지 다시 시도한다', async () => {
   let calls = 0;
   const flaky: Ask = async () => { if (++calls < 3) throw new Error('timeout'); return { picks: [1] }; };
-  assert.deepEqual(await selectCandidates(cands(3), flaky), [cands(3)[1]]);
+  assert.deepEqual(await selectCandidates(cands(3), flaky, 10, 0), [cands(3)[1]]);
   assert.equal(calls, 3);
 
   calls = 0;
-  await assert.rejects(selectCandidates(cands(3), async () => { calls++; throw new Error('HTTP 401'); }), /401/);
+  await assert.rejects(selectCandidates(cands(3), async () => { calls++; throw new Error("HTTP 401"); }, 10, 0), /401/);
   assert.equal(calls, 3);
+});
+
+test('모델을 쉼표로 여럿 주면 앞 모델이 막혔을 때 다음 모델로 넘어간다', async () => {
+  const tried: string[] = [];
+  const fetchFn = (async (_u: string, init: RequestInit) => {
+    const model = JSON.parse(String(init.body)).model;
+    tried.push(model);
+    return model === 'a:free' ? new Response('rate limited', { status: 429 }) : Response.json({ choices: [{ message: { content: '{"n":1}' } }] });
+  }) as unknown as typeof fetch;
+  assert.deepEqual(await makeAsk({ apiKey: 'k', model: 'a:free, b:free, c:free', fetchFn })('s', 'u', {}), { n: 1 });
+  assert.deepEqual(tried, ['a:free', 'b:free']);
+
+  const down = (async () => new Response('x', { status: 429 })) as unknown as typeof fetch;
+  await assert.rejects(makeAsk({ apiKey: 'k', model: 'a:free,b:free', fetchFn: down })('s', 'u', {}), /429/);
 });

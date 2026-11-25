@@ -15,13 +15,14 @@ const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
  */
 export function makeAsk(opts: { apiKey: string; model: string; fetchFn?: typeof fetch }): Ask {
   const fetchFn = opts.fetchFn ?? fetch;
-  return async (system, user, schema) => {
+  const models = opts.model.split(',').map((m) => m.trim()).filter(Boolean);
+  const once = async (model: string, system: string, user: string, schema: object): Promise<unknown> => {
     const res = await fetchFn(ENDPOINT, {
       method: 'POST',
       headers: { authorization: `Bearer ${opts.apiKey}`, 'content-type': 'application/json' },
       signal: AbortSignal.timeout(60_000),
       body: JSON.stringify({
-        model: opts.model,
+        model,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user },
@@ -33,6 +34,18 @@ export function makeAsk(opts: { apiKey: string; model: string; fetchFn?: typeof 
     const content = (await res.json())?.choices?.[0]?.message?.content;
     if (typeof content !== 'string') throw new Error('LLM 응답에 내용이 없음');
     return JSON.parse(content.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, ''));
+  };
+  // 쉼표로 여럿 주면 앞 모델이 막히거나 늦을 때 다음 모델로 넘어간다(무료 모델은 수시로 429를 낸다).
+  return async (system, user, schema) => {
+    let last: unknown;
+    for (const model of models) {
+      try {
+        return await once(model, system, user, schema);
+      } catch (e) {
+        last = e;
+      }
+    }
+    throw last;
   };
 }
 
@@ -60,7 +73,7 @@ const SELECT_SCHEMA = {
  * 같은 사건은 하나로 묶고 쓸모 있는 순으로 최대 max건.
  * 호출 실패나 형식이 틀린 답은 오류로 올린다 — 키 만료 같은 고장이 "새 글 없음"으로 묻히면 안 된다.
  */
-export async function selectCandidates(cands: Candidate[], ask: Ask, max = 10): Promise<Candidate[]> {
+export async function selectCandidates(cands: Candidate[], ask: Ask, max = 10, retryWaitMs = 20_000): Promise<Candidate[]> {
   if (cands.length === 0) return [];
   const list = cands
     .map((c, i) => `[${i}] ${c.official ? '공식 · ' : ''}${c.lang === 'ko' ? '한국어' : '영어'} · ${c.sourceName}\n제목: ${c.title}\n발췌: ${c.excerpt.slice(0, 200)}`)
@@ -75,6 +88,7 @@ export async function selectCandidates(cands: Candidate[], ask: Ask, max = 10): 
     } catch (e) {
       if (attempt === 3) throw e;
       console.warn(`[llm] 선별 ${attempt}번째 실패, 다시 시도: ${e instanceof Error ? e.message : e}`);
+      await new Promise((r) => setTimeout(r, retryWaitMs));
     }
   }
   const picks = [...new Set(out.picks)].filter((n): n is number => Number.isInteger(n) && n >= 0 && n < cands.length);
