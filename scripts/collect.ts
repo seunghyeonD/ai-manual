@@ -5,6 +5,7 @@ import { fetchFeeds, type Source } from './lib/rss.ts';
 import { fetchArticleText } from './lib/article.ts';
 import { filterNew } from './lib/dedupe.ts';
 import { makeAsk, selectCandidates, summarize, type Ask } from './lib/llm.ts';
+import { makeClaudeAsk } from './lib/claude.ts';
 import { newsFileName, readBlockedUrls, readExistingUrls, toMarkdown } from './lib/newsFile.ts';
 
 /** 한국 시간 기준 YYYY-MM-DD. */
@@ -63,9 +64,14 @@ export async function runCollect(deps: Deps): Promise<{ written: string[] }> {
 }
 
 async function main() {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    console.error('OPENROUTER_API_KEY 환경 변수가 필요합니다.');
+  // ANTHROPIC_API_KEY가 있으면 Claude를, 없으면 OpenRouter(무료 모델)를 쓴다.
+  let ask: Ask;
+  if (process.env.ANTHROPIC_API_KEY) {
+    ask = makeClaudeAsk({ model: process.env.CLAUDE_MODEL || 'claude-haiku-5-5' });
+  } else if (process.env.OPENROUTER_API_KEY) {
+    ask = makeAsk({ apiKey: process.env.OPENROUTER_API_KEY, model: process.env.LLM_MODEL || 'openrouter/free' });
+  } else {
+    console.error('ANTHROPIC_API_KEY 또는 OPENROUTER_API_KEY 환경 변수가 필요합니다.');
     process.exit(1);
   }
   const root = new URL('..', import.meta.url);
@@ -74,7 +80,7 @@ async function main() {
     newsDir: fileURLToPath(new URL('src/content/news', root)),
     blockedFile: fileURLToPath(new URL('blocked-urls.txt', root)),
     today: seoulDate(new Date()),
-    ask: makeAsk({ apiKey, model: process.env.LLM_MODEL || 'openrouter/free' }),
+    ask,
     dryRun: process.argv.includes('--dry-run'),
   });
 }

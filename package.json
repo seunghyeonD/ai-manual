@@ -16,6 +16,7 @@
     "node": ">=22.23.4"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
     "astro": "^7.4.13",
     "robots-parser": "^3.1.1",
     "rss-parser": "^3.13.0"

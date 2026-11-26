@@ -44,7 +44,8 @@ OPENROUTER_API_KEY=... npm run collect -- --dry-run   # 저장 없이 요약만 
 
 | 이름 | 어디에 | 용도 |
 |---|---|---|
-| `OPENROUTER_API_KEY` | GitHub Actions 시크릿 | 뉴스 선별·요약 |
+| `ANTHROPIC_API_KEY` | GitHub Actions 시크릿 | 뉴스 선별·요약 (Claude Haiku). 있으면 이쪽을 씁니다 |
+| `OPENROUTER_API_KEY` | GitHub Actions 시크릿 | Claude 키가 없을 때 쓰는 무료 모델 |
 | `LLM_MODEL` | GitHub Actions 변수(선택) | 모델 지정. 기본 `openrouter/free` |
 | `PUBLIC_SHOW_DRAFTS` | 호스팅의 Preview 환경에만 `true` | 미검증 가이드를 "미검증 초안" 띠와 함께 표시 |
 | `PUBLIC_CF_ANALYTICS_TOKEN` | 호스팅의 Production 환경 | Cloudflare 방문 통계 |

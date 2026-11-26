@@ -24,6 +24,7 @@ jobs:
       - name: 수집·요약
         run: npm run collect
         env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
       # 형식이 깨진 글이 main에 들어가 사이트 빌드를 막는 일이 없게 먼저 빌드해 본다.
