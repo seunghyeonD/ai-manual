@@ -11,10 +11,13 @@ const fake = (message: object) => {
 test('Claude 호출은 도구 없이 형식을 지정하고 글 블록의 JSON을 돌려준다', async () => {
   const { client, seen } = fake({
     stop_reason: 'end_turn',
+    usage: { input_tokens: 120, output_tokens: 30 },
     content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: '{"picks":[1]}' }],
   });
   const schema = { type: 'object' };
-  assert.deepEqual(await makeClaudeAsk({ model: 'claude-haiku-5-5', client })('sys', 'usr', schema), { picks: [1] });
+  const used: number[] = [];
+  assert.deepEqual(await makeClaudeAsk({ model: 'claude-haiku-5-5', client, onUsage: (i, o) => used.push(i, o) })('sys', 'usr', schema), { picks: [1] });
+  assert.deepEqual(used, [120, 30]);
   assert.equal(seen[0].model, 'claude-haiku-5-5');
   assert.equal(seen[0].system, 'sys');
   assert.deepEqual(seen[0].messages, [{ role: 'user', content: 'usr' }]);

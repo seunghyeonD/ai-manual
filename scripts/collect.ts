@@ -67,7 +67,12 @@ async function main() {
   // ANTHROPIC_API_KEY가 있으면 Claude를, 없으면 OpenRouter(무료 모델)를 쓴다.
   let ask: Ask;
   if (process.env.ANTHROPIC_API_KEY) {
-    ask = makeClaudeAsk({ model: process.env.CLAUDE_MODEL || 'claude-haiku-5-5' });
+    const used = { input: 0, output: 0, calls: 0 };
+    ask = makeClaudeAsk({
+      model: process.env.CLAUDE_MODEL || 'claude-haiku-5-5',
+      onUsage: (i, o) => { used.input += i; used.output += o; used.calls++; },
+    });
+    process.on('exit', () => console.log(`[llm] Claude 호출 ${used.calls}회, 입력 ${used.input} 토큰, 출력 ${used.output} 토큰`));
   } else if (process.env.OPENROUTER_API_KEY) {
     ask = makeAsk({ apiKey: process.env.OPENROUTER_API_KEY, model: process.env.LLM_MODEL || 'openrouter/free' });
   } else {
