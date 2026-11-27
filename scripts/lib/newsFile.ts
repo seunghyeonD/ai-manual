@@ -75,3 +75,20 @@ export async function readBlockedUrls(file: string): Promise<Set<string>> {
   }
   return urls;
 }
+
+/** 최근 days일 동안 실은 소식의 제목. 같은 사건을 다른 매체 글로 또 싣지 않게 선별에 넘긴다. */
+export async function readRecentTitles(dir: string, today: string, days = 3): Promise<string[]> {
+  const since = new Date(Date.parse(today) - days * 86_400_000).toISOString().slice(0, 10);
+  const files = (await readdir(dir).catch(() => [] as string[])).filter((f) => f.endsWith('.md') && f.slice(0, 10) >= since);
+  const titles: string[] = [];
+  for (const f of files) {
+    const m = (await readFile(join(dir, f), 'utf8')).match(/^title:\s*(.+)$/m);
+    if (!m) continue;
+    try {
+      titles.push(m[1].startsWith('"') ? JSON.parse(m[1]) : m[1].trim());
+    } catch {
+      // 깨진 제목은 넘어간다.
+    }
+  }
+  return titles;
+}

@@ -6,7 +6,7 @@ import { fetchArticleText } from './lib/article.ts';
 import { filterNew } from './lib/dedupe.ts';
 import { makeAsk, selectCandidates, summarize, type Ask } from './lib/llm.ts';
 import { makeClaudeAsk } from './lib/claude.ts';
-import { newsFileName, readBlockedUrls, readExistingUrls, toMarkdown } from './lib/newsFile.ts';
+import { newsFileName, readBlockedUrls, readRecentTitles, readExistingUrls, toMarkdown } from './lib/newsFile.ts';
 
 /** 한국 시간 기준 YYYY-MM-DD. */
 export const seoulDate = (d: Date): string =>
@@ -31,7 +31,7 @@ export async function runCollect(deps: Deps): Promise<{ written: string[] }> {
   const candidates = await fetchFeeds(sources, { now, fetchFn });
   const known = new Set([...(await readExistingUrls(newsDir)), ...(blockedFile ? await readBlockedUrls(blockedFile) : [])]);
   const fresh = filterNew(candidates, known);
-  const picked = await selectCandidates(fresh, ask);
+  const picked = await selectCandidates(fresh, ask, { published: await readRecentTitles(newsDir, today) });
   console.log(`[collect] 후보 ${candidates.length}건, 새 글 ${fresh.length}건, 선별 ${picked.length}건`);
 
   const written: string[] = [];

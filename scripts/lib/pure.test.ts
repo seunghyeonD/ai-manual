@@ -8,7 +8,7 @@ import type { Candidate, NewsItem } from './types.ts';
 import { normalizeUrl } from './url.ts';
 import { filterNew } from './dedupe.ts';
 import { hasLongOverlap } from './overlap.ts';
-import { sanitize, toMarkdown, newsFileName, readExistingUrls, readBlockedUrls } from './newsFile.ts';
+import { sanitize, toMarkdown, newsFileName, readExistingUrls, readBlockedUrls, readRecentTitles } from './newsFile.ts';
 
 const base: Candidate = {
   title: '제목', url: 'https://ex.com/x', excerpt: '발췌', sourceName: '출처',
@@ -105,4 +105,13 @@ test('내린 글 목록의 주소는 이미 실린 것으로 본다', async () =
   await writeFile(file, '# 내린 글\n\nhttps://ex.com/down/?utm_source=x\nnot a url\n');
   assert.deepEqual(await readBlockedUrls(file), new Set([normalizeUrl('https://ex.com/down')]));
   assert.deepEqual(await readBlockedUrls(join(dir, 'none.txt')), new Set());
+});
+
+test('최근 며칠 동안 실은 소식의 제목을 읽는다', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'titles-'));
+  await writeFile(join(dir, '2026-11-24-aaaaaaaa.md'), '---\ntitle: "오늘 글"\n---\n');
+  await writeFile(join(dir, '2026-11-22-bbbbbbbb.md'), '---\ntitle: "그저께 글"\n---\n');
+  await writeFile(join(dir, '2026-11-10-cccccccc.md'), '---\ntitle: "오래된 글"\n---\n');
+  assert.deepEqual((await readRecentTitles(dir, '2026-11-24')).sort(), ['그저께 글', '오늘 글']);
+  assert.deepEqual(await readRecentTitles(join(dir, 'none'), '2026-11-24'), []);
 });

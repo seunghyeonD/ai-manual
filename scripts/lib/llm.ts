@@ -57,6 +57,7 @@ const SELECT_SYSTEM = `당신은 한국 직장인을 위한 AI 소식 사이트�
 - AI와 무관한 글, 투자·주가·인사·행사 홍보는 고르지 않습니다.
 - 연구자나 개발자만 관심 있을 글(모델 내부 구조, 성능 시험 점수 비교, 내 컴퓨터에 모델을 직접 설치하는 방법)은 고르지 않습니다.
 - 한 매체의 글은 최대 3개까지만 고릅니다.
+- <published>가 있으면 이미 실은 소식의 제목입니다. 같은 사건을 다룬 글은 다른 매체의 글이라도 고르지 않습니다.
 - 같은 사건을 다룬 글이 여럿이면 하나만 고릅니다. "공식"이라고 표시된 글을 먼저, 다음으로 한국어 글을 고릅니다.
 - 쓸모 있는 순서대로 나열합니다. 고를 글이 없으면 빈 목록을 돌려줍니다.
 
@@ -73,8 +74,14 @@ const SELECT_SCHEMA = {
  * 같은 사건은 하나로 묶고 쓸모 있는 순으로 최대 max건.
  * 호출 실패나 형식이 틀린 답은 오류로 올린다 — 키 만료 같은 고장이 "새 글 없음"으로 묻히면 안 된다.
  */
-export async function selectCandidates(cands: Candidate[], ask: Ask, max = 10, retryWaitMs = 20_000): Promise<Candidate[]> {
+export async function selectCandidates(
+  cands: Candidate[],
+  ask: Ask,
+  opts: { max?: number; retryWaitMs?: number; perSource?: number; published?: string[] } = {},
+): Promise<Candidate[]> {
+  const { max = 10, retryWaitMs = 20_000, perSource = 3, published = [] } = opts;
   if (cands.length === 0) return [];
+  const already = published.length ? `<published>\n${published.map((t) => `- ${t}`).join('\n')}\n</published>\n\n` : '';
   const list = cands
     .map((c, i) => `[${i}] ${c.official ? '공식 · ' : ''}${c.lang === 'ko' ? '한국어' : '영어'} · ${c.sourceName}\n제목: ${c.title}\n발췌: ${c.excerpt.slice(0, 200)}`)
     .join('\n\n');
@@ -82,7 +89,7 @@ export async function selectCandidates(cands: Candidate[], ask: Ask, max = 10, r
   let out: { picks?: unknown } | undefined;
   for (let attempt = 1; ; attempt++) {
     try {
-      out = (await ask(SELECT_SYSTEM, `최대 ${max}개를 고르세요.\n\n<candidates>\n${list}\n</candidates>`, SELECT_SCHEMA)) as { picks?: unknown };
+      out = (await ask(SELECT_SYSTEM, `최대 ${max}개를 고르세요.\n\n${already}<candidates>\n${list}\n</candidates>`, SELECT_SCHEMA)) as { picks?: unknown };
       if (!Array.isArray(out?.picks)) throw new Error('선별 응답의 형식이 틀렸습니다');
       break;
     } catch (e) {
@@ -92,7 +99,16 @@ export async function selectCandidates(cands: Candidate[], ask: Ask, max = 10, r
     }
   }
   const picks = [...new Set(out.picks)].filter((n): n is number => Number.isInteger(n) && n >= 0 && n < cands.length);
-  return picks.slice(0, max).map((n) => cands[n]);
+  // 지시문만으로는 한 매체에 몰리는 것을 막지 못해 코드에서 한 번 더 자른다.
+  const count = new Map<string, number>();
+  return picks
+    .map((n) => cands[n])
+    .filter((c) => {
+      const n = (count.get(c.sourceName) ?? 0) + 1;
+      count.set(c.sourceName, n);
+      return n <= perSource;
+    })
+    .slice(0, max);
 }
 
 const SUMMARIZE_SYSTEM = `당신은 AI를 잘 모르는 한국 직장인에게 AI 소식을 쉽게 풀어 주는 편집자입니다.
@@ -145,20 +161,24 @@ export async function summarize(cand: Candidate, body: string | null, ask: Ask, 
     console.warn(`[llm] 요약 실패 (${cand.url}): ${e instanceof Error ? e.message : e}`);
     return null;
   }
-  if (raw.skip !== false) return null;
+  const drop = (why: string): null => {
+    console.warn(`[llm] 건너뜀(${why}): ${cand.title}`);
+    return null;
+  };
+  if (raw.skip !== false) return drop('모델이 쓸모없다고 판단');
 
   const title = text(raw.title);
   const whyItMatters = text(raw.whyItMatters);
   const summary = Array.isArray(raw.summary) ? raw.summary.map(text) : [];
   const roles = Array.isArray(raw.roles) ? [...new Set(raw.roles)] : [];
-  if (!title || !whyItMatters) return null;
-  if (summary.length < 3 || summary.length > 5 || summary.some((s) => !s)) return null;
-  if (roles.length === 0 || !roles.every((r): r is Role => (ROLES as readonly unknown[]).includes(r))) return null;
+  if (!title || !whyItMatters) return drop('제목이나 의미가 비어 있음');
+  if (summary.length < 3 || summary.length > 5 || summary.some((s) => !s)) return drop('요약이 3~5줄이 아님');
+  if (roles.length === 0 || !roles.every((r): r is Role => (ROLES as readonly unknown[]).includes(r))) return drop('직군이 목록에 없음');
   const prose = [...summary, whyItMatters];
-  if ([title, ...prose].some((s) => FOREIGN.test(s))) return null;
-  if (prose.some((s) => !POLITE_END.test(s))) return null;
+  if ([title, ...prose].some((s) => FOREIGN.test(s))) return drop('다른 나라 글자가 섞임');
+  if (prose.some((s) => !POLITE_END.test(s))) return drop('말투가 "~습니다"체가 아님');
   // 제목은 사실 표기라 원문 제목과 같아도 된다. 베낌 검사는 요약 문장에만 한다.
-  if (hasLongOverlap(prose, material)) return null;
+  if (hasLongOverlap(prose, material)) return drop('원문 문장을 길게 옮겨 적음');
 
   return { title, date: today, sourceName: cand.sourceName, sourceUrl: stripTracking(cand.url), lang: cand.lang, roles, summary, whyItMatters };
 }

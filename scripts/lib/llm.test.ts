@@ -5,7 +5,7 @@ import { makeAsk, selectCandidates, summarize, type Ask } from './llm.ts';
 
 const cands = (n: number): Candidate[] =>
   Array.from({ length: n }, (_, i) => ({
-    title: `제목 ${i}`, url: `https://ex.com/${i}`, excerpt: `발췌 ${i}`, sourceName: '출처',
+    title: `제목 ${i}`, url: `https://ex.com/${i}`, excerpt: `발췌 ${i}`, sourceName: `출처 ${i % 5}`,
     lang: 'ko' as const, official: false, publishedAt: '2026-11-24T00:00:00Z',
   }));
 const c = cands(1)[0];
@@ -31,8 +31,8 @@ test('범위 밖·중복 번호는 무시한다', async () => {
 });
 
 test('선별 호출이 실패하면 조용히 넘어가지 않고 오류를 낸다', async () => {
-  await assert.rejects(selectCandidates(cands(3), async () => { throw new Error("HTTP 401"); }, 10, 0), /401/);
-  await assert.rejects(selectCandidates(cands(3), answer("oops"), 10, 0), /형식/);
+  await assert.rejects(selectCandidates(cands(3), async () => { throw new Error("HTTP 401"); }, { retryWaitMs: 0 }), /401/);
+  await assert.rejects(selectCandidates(cands(3), answer("oops"), { retryWaitMs: 0 }), /형식/);
 });
 
 test('고를 글이 없다는 답은 오류가 아니다', async () => {
@@ -171,11 +171,11 @@ test('요약 지시문은 말투와 숫자 규칙을 담는다', async () => {
 test('선별은 실패하면 두 번까지 다시 시도한다', async () => {
   let calls = 0;
   const flaky: Ask = async () => { if (++calls < 3) throw new Error('timeout'); return { picks: [1] }; };
-  assert.deepEqual(await selectCandidates(cands(3), flaky, 10, 0), [cands(3)[1]]);
+  assert.deepEqual(await selectCandidates(cands(3), flaky, { retryWaitMs: 0 }), [cands(3)[1]]);
   assert.equal(calls, 3);
 
   calls = 0;
-  await assert.rejects(selectCandidates(cands(3), async () => { calls++; throw new Error("HTTP 401"); }, 10, 0), /401/);
+  await assert.rejects(selectCandidates(cands(3), async () => { calls++; throw new Error("HTTP 401"); }, { retryWaitMs: 0 }), /401/);
   assert.equal(calls, 3);
 });
 
@@ -191,4 +191,27 @@ test('모델을 쉼표로 여럿 주면 앞 모델이 막혔을 때 다음 모�
 
   const down = (async () => new Response('x', { status: 429 })) as unknown as typeof fetch;
   await assert.rejects(makeAsk({ apiKey: 'k', model: 'a:free,b:free', fetchFn: down })('s', 'u', {}), /429/);
+});
+
+test('한 매체의 글은 세 개까지만 고른다', async () => {
+  const same = cands(8).map((c) => ({ ...c, sourceName: '한곳' }));
+  const mixed = [...same, { ...cands(1)[0], url: 'https://other.example/x', sourceName: '다른 곳' }];
+  const out = await selectCandidates(mixed, answer({ picks: [0, 1, 2, 3, 4, 8] }));
+  assert.deepEqual(out.map((c) => c.url), [mixed[0].url, mixed[1].url, mixed[2].url, mixed[8].url]);
+});
+
+test('이미 실은 소식의 제목을 선별에 넘겨 같은 사건을 다시 고르지 않게 한다', async () => {
+  let seen = { system: '', user: '' };
+  await selectCandidates(cands(2), async (system, user) => { seen = { system, user }; return { picks: [] }; }, { published: ['구글 검색, 내 문서를 참고'] });
+  assert.ok(seen.user.includes('<published>\n- 구글 검색, 내 문서를 참고\n</published>'));
+  assert.match(seen.system, /published.*고르지 않습니다/s);
+});
+
+test('요약을 건너뛸 때는 이유를 남긴다', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {});
+  await summarize(c, longBody, answer({ ...ok, skip: true }), today);
+  await summarize(c, longBody, answer({ ...ok, summary: ['회사가 새 서비스를 공개했다.', ...ok.summary.slice(1)] }), today);
+  const said = warn.mock.calls.map((x) => String(x.arguments[0]));
+  assert.match(said[0], /건너뜀.*모델/);
+  assert.match(said[1], /건너뜀.*말투/);
 });
