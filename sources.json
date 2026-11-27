@@ -2,16 +2,18 @@
   { "name": "OpenAI", "feedUrl": "https://openai.com/news/rss.xml", "lang": "en", "official": true },
   { "name": "Google AI", "feedUrl": "https://blog.google/technology/ai/rss/", "lang": "en", "official": true },
   { "name": "Google DeepMind", "feedUrl": "https://deepmind.google/blog/rss.xml", "lang": "en", "official": true },
-  { "name": "Hugging Face", "feedUrl": "https://huggingface.co/blog/feed.xml", "lang": "en", "official": true },
-  { "name": "GitHub Blog", "feedUrl": "https://github.blog/ai-and-ml/feed/", "lang": "en", "official": true },
-  { "name": "NVIDIA Blog", "feedUrl": "https://blogs.nvidia.com/feed/", "lang": "en", "official": true },
+  { "name": "Microsoft AI", "feedUrl": "https://news.microsoft.com/source/topics/ai/feed/", "lang": "en", "official": true },
+  { "name": "Microsoft Copilot", "feedUrl": "https://www.microsoft.com/en-us/microsoft-365/blog/feed/", "lang": "en", "official": true },
+  { "name": "Meta", "feedUrl": "https://about.fb.com/news/feed/", "lang": "en", "official": true },
   { "name": "The Verge", "feedUrl": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "lang": "en", "official": false },
   { "name": "TechCrunch", "feedUrl": "https://techcrunch.com/category/artificial-intelligence/feed/", "lang": "en", "official": false },
   { "name": "MIT Technology Review", "feedUrl": "https://www.technologyreview.com/topic/artificial-intelligence/feed", "lang": "en", "official": false },
   { "name": "Ars Technica", "feedUrl": "https://arstechnica.com/ai/feed/", "lang": "en", "official": false },
+  { "name": "WIRED", "feedUrl": "https://www.wired.com/feed/tag/ai/latest/rss", "lang": "en", "official": false },
   { "name": "AI타임스", "feedUrl": "https://www.aitimes.com/rss/allArticle.xml", "lang": "ko", "official": false },
   { "name": "인공지능신문", "feedUrl": "https://www.aitimes.kr/rss/allArticle.xml", "lang": "ko", "official": false },
   { "name": "GeekNews", "feedUrl": "https://news.hada.io/rss/news", "lang": "ko", "official": false },
   { "name": "요즘IT", "feedUrl": "https://yozm.wishket.com/magazine/feed/", "lang": "ko", "official": false },
-  { "name": "ZDNet Korea", "feedUrl": "https://feeds.feedburner.com/zdkorea", "lang": "ko", "official": false }
+  { "name": "ZDNet Korea", "feedUrl": "https://feeds.feedburner.com/zdkorea", "lang": "ko", "official": false },
+  { "name": "전자신문", "feedUrl": "https://rss.etnews.com/04.xml", "lang": "ko", "official": false }
 ]
