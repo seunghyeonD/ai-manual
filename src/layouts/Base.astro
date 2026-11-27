@@ -6,6 +6,7 @@ interface Props { title?: string; description?: string; }
 const { title, description = SITE_TAGLINE } = Astro.props;
 const fullTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME} — ${SITE_TAGLINE}`;
 const path = Astro.url.pathname;
+const canonical = new URL(path, Astro.site).href;
 const nav = [
   { href: '/news/', label: '뉴스' },
   { href: '/guides/', label: '가이드' },
@@ -22,6 +23,8 @@ const nav = [
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <link rel="canonical" href={canonical} />
     {SHOW_DRAFTS && <meta name="robots" content="noindex, nofollow" />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
