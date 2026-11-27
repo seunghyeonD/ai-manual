@@ -28,12 +28,15 @@ const cities = Object.keys(wx);
     </script>
     <section class="hero hud">
       <div class="hud-log">
-        <p class="hud-line"><span>오늘 브리핑 준비</span><b>완료</b></p>
+        <p class="hud-line" style="--i:1"><span>오늘 브리핑 준비</span><b>완료</b></p>
         {cities.length > 0
-          ? <p class="hud-line"><span><select id="city" aria-label="날씨를 볼 지역 고르기">{cities.map((c) => <option value={c} data-wx={wx[c]}>{c}</option>)}</select> 날씨</span><b id="wx">{wx[cities[0]]}</b></p>
-          : <p class="hud-line"><span>날씨</span><b>확인하지 못함</b></p>}
-        <p class="hud-line"><span>오늘 AI 소식</span><b>{todayCount}건 정리</b></p>
-        <p class="hud-line"><span>화면 모드</span><b id="mode">자동</b></p>
+          ? <div id="cityrow" data-wx={JSON.stringify(wx)}>
+              <p class="hud-line" style="--i:5"><span id="cityname">날씨</span><b id="wx" aria-live="polite">지역을 골라 주세요</b><button type="button" id="citychange" hidden>바꾸기</button></p>
+              <div class="hud-chips" id="chips" role="group" aria-label="날씨를 볼 지역 고르기" style="--i:7">{cities.map((c) => <button type="button" data-city={c}>{c}</button>)}</div>
+            </div>
+          : <p class="hud-line" style="--i:5"><span>날씨</span><b>확인하지 못함</b></p>}
+        <p class="hud-line" style="--i:9"><span>오늘 AI 소식</span><b>{todayCount}건 정리</b></p>
+        <p class="hud-line" style="--i:13"><span>화면 모드</span><b id="mode">자동</b></p>
         <h1 id="hi">안녕하세요.</h1>
         <p class="hud-say">브리핑을 시작합니다. 아래에서 내 일에 맞는 소식을 골라 보세요.</p>
       </div>
@@ -82,12 +85,21 @@ const cities = Object.keys(wx);
       tick(); setInterval(tick, 15000);
       document.getElementById('mode').textContent = h >= 6 && h < 18 ? '주간 (밝게)' : '야간 (어둡게)';
       // 고른 지역은 이 브라우저에만 기억한다. 날씨 값은 페이지에 이미 들어 있어 따로 요청하지 않는다.
-      const city = document.getElementById('city');
-      if (city) {
-        const show = () => { document.getElementById('wx').textContent = city.selectedOptions[0].dataset.wx; };
-        try { const saved = localStorage.getItem('city'); if ([...city.options].some((o) => o.value === saved)) city.value = saved; } catch {}
-        show();
-        city.addEventListener('change', () => { show(); try { localStorage.setItem('city', city.value); } catch {} });
+      const row = document.getElementById('cityrow');
+      if (row) {
+        const map = JSON.parse(row.dataset.wx), chips = document.getElementById('chips'), change = document.getElementById('citychange');
+        const pick = (c) => {
+          document.getElementById('cityname').textContent = c + ' 날씨';
+          document.getElementById('wx').textContent = map[c];
+          chips.hidden = true; change.hidden = false;
+        };
+        try { const saved = localStorage.getItem('city'); if (saved in map) pick(saved); } catch {}
+        chips.addEventListener('click', (e) => {
+          const c = e.target.dataset.city; if (!c) return;
+          pick(c); change.focus();
+          try { localStorage.setItem('city', c); } catch {}
+        });
+        change.addEventListener('click', () => { chips.hidden = false; change.hidden = true; chips.querySelector('button').focus(); });
       }
       const root = document.documentElement;
       if (!root.classList.contains('intro')) { el.textContent = hi; return; }
