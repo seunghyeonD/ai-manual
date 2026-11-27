@@ -18,6 +18,10 @@ const nav = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // ponytail: 06~18시는 밝게, 그 밖은 어둡게. 계절별 해 지는 시각까지 맞추려면 빌드 때 받은 일몰 시각을 쓰기
+      { const h = new Date().getHours(); document.documentElement.style.colorScheme = h >= 6 && h < 18 ? 'light' : 'dark'; }
+    </script>
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <meta property="og:title" content={fullTitle} />

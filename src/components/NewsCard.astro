@@ -3,8 +3,8 @@ import type { News } from '../lib/content';
 import { roleSlug } from '../config/roles';
 import { koDate } from '../lib/format';
 
-interface Props { entry: News; showDate?: boolean; }
-const { entry, showDate = false } = Astro.props;
+interface Props { entry: News; showDate?: boolean; compact?: boolean; }
+const { entry, showDate = false, compact = false } = Astro.props;
 const d = entry.data;
 ---
 <article class="card" id={`n-${entry.id}`} data-roles={d.roles.map(roleSlug).join(' ')}>
@@ -14,7 +14,7 @@ const d = entry.data;
     {d.lang === 'en' && <span class="hot">영어 원문</span>}
   </p>
   <h3>{d.title}</h3>
-  <ul class="sum">{d.summary.map((line) => <li>{line}</li>)}</ul>
+  {!compact && <ul class="sum">{d.summary.map((line) => <li>{line}</li>)}</ul>}
   <p class="why"><b>그래서 뭐가 달라지나요</b>{d.whyItMatters}</p>
   <div class="card-foot">
     <ul class="tags" aria-label="관련 직군">{d.roles.map((r) => <li>{r}</li>)}</ul>
