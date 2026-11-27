@@ -59,5 +59,6 @@ jobs:
           if [ -z "$(gh pr list --head news-review --state open --json number --jq '.[].number')" ]; then
             gh pr create --base main --head news-review \
               --title "소식 검토 ($(TZ=Asia/Seoul date +%F)부터)" \
-              --body-file .github/news-review.md
+              --body-file .github/news-review.md \
+              || echo "::warning::검토 요청을 자동으로 열지 못했습니다. 이 주소에서 직접 여세요: https://github.com/${{ github.repository }}/compare/main...news-review?expand=1"
           fi
