@@ -5,11 +5,16 @@ import GuideCard from '../components/GuideCard.astro';
 import { getNews, getGuides } from '../lib/content';
 import { ROLES, roleSlug } from '../config/roles';
 import { fetchWeather } from '../lib/weather';
+import { koDate } from '../lib/format';
 
 const allNews = await getNews();
 const news = allNews.slice(0, 6);
 const guides = (await getGuides()).slice(0, 3);
-const todayCount = allNews.filter((n) => n.data.date === allNews[0].data.date).length;
+// "오늘"이라고 단정하지 않는다. 검토가 늦은 날에는 가장 최근 소식이 어제 것일 수 있다.
+const latest = allNews[0]?.data.date;
+const latestCount = allNews.filter((n) => n.data.date === latest).length;
+// 예보를 받은 날(서울 기준). 다른 날에 보는 사람에게는 날씨를 보여 주지 않는다.
+const forecastDay = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
 
 const wx = await fetchWeather();
 const cities = Object.keys(wx);
@@ -28,15 +33,15 @@ const cities = Object.keys(wx);
     </script>
     <section class="hero hud">
       <div class="hud-log">
-        <p class="hud-line" style="--i:1"><span>오늘 브리핑 준비</span><b>완료</b></p>
+        <p class="hud-line" style="--i:1"><span>소식 검토</span><b>사람이 확인한 뒤 공개</b></p>
         {cities.length > 0
-          ? <div id="cityrow" data-wx={JSON.stringify(wx)}>
+          ? <div id="cityrow" data-wx={JSON.stringify(wx)} data-day={forecastDay}>
               <p class="hud-line" style="--i:5"><span><span id="cityname">날씨</span> <button type="button" id="citychange" hidden>바꾸기</button></span><b id="wx" aria-live="polite">지역을 골라 주세요</b></p>
               <p class="hud-line" id="tiprow" hidden><span>오늘 챙길 것</span><b id="tip" aria-live="polite"></b></p>
               <div class="hud-chips" id="chips" role="group" aria-label="날씨를 볼 지역 고르기" style="--i:7">{cities.map((c) => <button type="button" data-city={c}>{c}</button>)}</div>
             </div>
           : <p class="hud-line" style="--i:5"><span>날씨</span><b>확인하지 못함</b></p>}
-        <p class="hud-line" style="--i:9"><span>오늘 AI 소식</span><b>{todayCount}건 정리</b></p>
+        <p class="hud-line" style="--i:9"><span>최근 AI 소식</span><b>{latest ? `${koDate(latest)} ${latestCount}건` : '준비 중'}</b></p>
         <p class="hud-line" style="--i:13"><span>화면 모드</span><b id="mode">자동</b></p>
         <h1 id="hi">안녕하세요.</h1>
         <p class="hud-say">브리핑을 시작합니다. 아래에서 내 일에 맞는 소식을 골라 보세요.</p>
@@ -67,7 +72,7 @@ const cities = Object.keys(wx);
     )}
 
     <section class="sec build" aria-labelledby="h-news">
-      <div class="sec-head"><h2 id="h-news">오늘의 AI 소식</h2><a class="more" href="/news/">전체 보기 →</a></div>
+      <div class="sec-head"><h2 id="h-news">최근 AI 소식</h2><a class="more" href="/news/">전체 보기 →</a></div>
       {news.length > 0
         ? <div class="grid">{news.map((n) => <NewsCard entry={n} showDate compact />)}</div>
         : <p class="none">아직 올라온 소식이 없습니다.</p>}
@@ -87,7 +92,11 @@ const cities = Object.keys(wx);
       document.getElementById('mode').textContent = h >= 6 && h < 18 ? '주간 (밝게)' : '야간 (어둡게)';
       // 고른 지역은 이 브라우저에만 기억한다. 날씨 값은 페이지에 이미 들어 있어 따로 요청하지 않는다.
       const row = document.getElementById('cityrow');
-      if (row) {
+      if (row && row.dataset.day !== new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })) {
+        // 오늘 받은 예보가 아니면 어제 날씨를 오늘 것처럼 보여 주지 않는다.
+        document.getElementById('wx').textContent = '오늘 예보를 아직 받지 못했습니다';
+        document.getElementById('chips').hidden = true;
+      } else if (row) {
         const map = JSON.parse(row.dataset.wx), chips = document.getElementById('chips'), change = document.getElementById('citychange');
         const pick = (c) => {
           document.getElementById('cityname').textContent = c + ' 날씨';

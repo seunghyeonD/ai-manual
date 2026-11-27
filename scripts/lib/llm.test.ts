@@ -215,3 +215,15 @@ test('요약을 건너뛸 때는 이유를 남긴다', async (t) => {
   assert.match(said[0], /건너뜀.*모델/);
   assert.match(said[1], /건너뜀.*말투/);
 });
+
+test('원문에 없는 숫자가 들어간 요약은 싣지 않는다', async () => {
+  const made = { ...ok, summary: [...ok.summary.slice(0, 2), '이 기능은 2031년 7월부터 쓸 수 있습니다.'] };
+  assert.equal(await summarize(c, longBody, answer(made), today), null);
+  assert.equal(await summarize(c, longBody, answer({ ...ok, title: '새 서비스 9999종 출시' }), today), null);
+});
+
+test('원문에 있는 숫자를 쓴 요약은 싣는다', async () => {
+  const body = `${longBody} 이 기능은 2031년 7월부터 쓸 수 있다.`;
+  const made = { ...ok, summary: [...ok.summary.slice(0, 2), '이 기능은 2031년 7월부터 쓸 수 있습니다.'] };
+  assert.ok(await summarize(c, body, answer(made), today));
+});

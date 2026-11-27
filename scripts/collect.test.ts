@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runCollect, seoulDate } from './collect.ts';
@@ -103,4 +103,25 @@ test('저장 단계의 실패도 그 글만 건너뛴다', async () => {
   await writeFile(newsDir, '폴더 자리에 파일이 있음');
   const { written } = await runCollect({ sources, newsDir, today, now, ask: ask(), fetchFn: site([1]) });
   assert.deepEqual(written, []);
+});
+
+test('검토에서 지운 글은 다음 수집 때 다시 올라오지 않는다', async () => {
+  const dir = await tmp();
+  const newsDir = join(dir, 'news');
+  const blockedFile = join(dir, 'blocked-urls.txt');
+  await writeFile(blockedFile, '# 다시 수집하지 않을 주소\n');
+  const first = await runCollect({ sources, newsDir, blockedFile, today, now, ask: ask(), fetchFn: site([1, 2]) });
+  assert.equal(first.written.length, 2);
+  // 검토하는 사람이 한 건을 지운다.
+  await rm(join(newsDir, first.written[0]));
+  const second = await runCollect({ sources, newsDir, blockedFile, today, now, ask: ask(), fetchFn: site([1, 2]) });
+  assert.deepEqual(second.written, []);
+  assert.match(await readFile(blockedFile, 'utf8'), /^# 다시 수집하지 않을 주소\n/);
+});
+
+test('시험 실행은 수집한 주소를 기록하지 않는다', async () => {
+  const dir = await tmp();
+  const blockedFile = join(dir, 'blocked-urls.txt');
+  await runCollect({ sources, newsDir: join(dir, 'news'), blockedFile, today, now, ask: ask(), fetchFn: site([1, 2]), dryRun: true });
+  assert.equal(await readFile(blockedFile, 'utf8').catch(() => ''), '');
 });

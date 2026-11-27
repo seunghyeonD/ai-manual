@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { fetchFeeds, type Source } from './lib/rss.ts';
@@ -49,6 +49,9 @@ export async function runCollect(deps: Deps): Promise<{ written: string[] }> {
       } else {
         await mkdir(newsDir, { recursive: true });
         await writeFile(join(newsDir, name), md);
+        // 검토에서 지운 글이 다음 날 다시 올라오지 않게, 저장한 글의 원문 주소를 적어 둔다.
+        // ponytail: 하루 10줄씩 늘어난다(1년 약 3,600줄). 느려지면 오래된 줄을 잘라 내기
+        if (blockedFile) await appendFile(blockedFile, `${item.sourceUrl}\n`);
       }
       written.push(name);
     } catch (e) {
