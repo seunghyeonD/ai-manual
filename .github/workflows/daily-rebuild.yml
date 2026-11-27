@@ -1,0 +1,27 @@
+name: daily-rebuild
+
+# 사이트는 저장소가 바뀔 때만 다시 만들어지고, 날씨는 그때 받아 온다.
+# 소식을 승인하지 않은 날에도 날씨가 오늘 것이 되도록, 매일 새벽 빈 커밋으로 한 번 다시 만들게 한다.
+on:
+  schedule:
+    - cron: '30 19 * * *' # 매일 04:30 KST. GitHub 예약 실행은 몇 시간 늦을 수 있어 일찍 잡았다.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: daily-rebuild
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: 빈 커밋으로 다시 만들기
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore(weather): $(TZ=Asia/Seoul date +%F) 날씨 갱신"
+          git push
