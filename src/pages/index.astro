@@ -31,7 +31,8 @@ const cities = Object.keys(wx);
         <p class="hud-line" style="--i:1"><span>오늘 브리핑 준비</span><b>완료</b></p>
         {cities.length > 0
           ? <div id="cityrow" data-wx={JSON.stringify(wx)}>
-              <p class="hud-line" style="--i:5"><span id="cityname">날씨</span><b id="wx" aria-live="polite">지역을 골라 주세요</b><button type="button" id="citychange" hidden>바꾸기</button></p>
+              <p class="hud-line" style="--i:5"><span><span id="cityname">날씨</span> <button type="button" id="citychange" hidden>바꾸기</button></span><b id="wx" aria-live="polite">지역을 골라 주세요</b></p>
+              <p class="hud-line" id="tiprow" hidden><span>오늘 챙길 것</span><b id="tip" aria-live="polite"></b></p>
               <div class="hud-chips" id="chips" role="group" aria-label="날씨를 볼 지역 고르기" style="--i:7">{cities.map((c) => <button type="button" data-city={c}>{c}</button>)}</div>
             </div>
           : <p class="hud-line" style="--i:5"><span>날씨</span><b>확인하지 못함</b></p>}
@@ -90,7 +91,8 @@ const cities = Object.keys(wx);
         const map = JSON.parse(row.dataset.wx), chips = document.getElementById('chips'), change = document.getElementById('citychange');
         const pick = (c) => {
           document.getElementById('cityname').textContent = c + ' 날씨';
-          document.getElementById('wx').textContent = map[c];
+          document.getElementById('wx').textContent = map[c].sky;
+          document.getElementById('tip').textContent = map[c].tip; document.getElementById('tiprow').hidden = false;
           chips.hidden = true; change.hidden = false;
         };
         try { const saved = localStorage.getItem('city'); if (saved in map) pick(saved); } catch {}
