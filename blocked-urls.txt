@@ -1,2 +1,9 @@
 # 다시 수집하지 않을 원문 주소를 한 줄에 하나씩 적습니다.
 # 수집기가 저장한 글의 주소를 자동으로 덧붙이므로, 검토에서 지운 글은 다시 올라오지 않습니다. 내릴 글의 주소를 직접 적어도 됩니다.
+https://www.aitimes.kr/news/articleView.html?idxno=42901
+https://www.aitimes.kr/news/articleView.html?idxno=42907
+https://www.aitimes.kr/news/articleView.html?idxno=42910
+https://www.aitimes.com/news/articleView.html?idxno=217828
+https://techcrunch.com/2026/11/25/state-ags-fight-character-ais-plan-to-auction-off-users-private-chats/
+https://techcrunch.com/2026/11/25/want-to-buy-your-kid-an-ai-toy-this-christmas-not-in-new-york/
+https://zdnet.co.kr/view/?no=20261127083334
